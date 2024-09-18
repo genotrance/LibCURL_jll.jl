@@ -1,0 +1,16 @@
+{
+	"image": "mcr.microsoft.com/devcontainers/base:bullseye",
+	"features": {
+		"ghcr.io/julialang/devcontainer-features/julia:1": {
+			"channel": "1.7"
+		}
+	},
+	"privileged": true,
+	"onCreateCommand": "./.devcontainer/postcreate.sh",
+	"containerEnv": {
+		"BINARYBUILDER_RUNNER": "privileged",
+		"BINARYBUILDER_AUTOMATIC_APPLE": "true",
+		"BINARYBUILDER_USE_CCACHE": "true"
+	},
+	"remoteUser": "root"
+}
