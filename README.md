@@ -35,3 +35,13 @@ A specific version of LibCURL can be built by specifying the version as an argum
 ```
 
 The version needs to be a valid LibCURL version number mentioned in the `build/L/LibCURL/common.jl` file.
+
+### Posting to GitHub
+
+To post the built artifacts to a GitHub repository, run the `post.sh` script:
+
+```bash
+./post.sh username/repo
+```
+
+The script will prompt the user to authenticate with GitHub to be able to post artifacts to this repository.
