@@ -40,8 +40,9 @@ The version needs to be a valid LibCURL version number mentioned in the `build/L
 
 To post the built artifacts to a GitHub repository, run the `post.sh` script:
 
-```bash
-./post.sh username/repo
-```
+1. Script will prompt the user to update the version information in `Project.toml`
+2. An updated `Artifacts.toml` will be generated based on artifacts and version info
+3. Script will prompt the user to review both toml files and commit/push to GitHub
+4. The final step will create a tag and and upload the build artifacts to the repository
 
 The script will prompt the user to authenticate with GitHub to be able to post artifacts to this repository.
