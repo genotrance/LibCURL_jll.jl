@@ -2,15 +2,7 @@
 
 This project builds custom binaries of the [LibCURL_jll.jl](https://github.com/JuliaBinaryWrappers/LibCURL_jll.jl/)
 project for [pymcurl](https://github.com/genotrance/mcurl). The build has been modified to include `Kerberos_krb5`
-on Linux and remove `LibSSH2` on all platforms. Builds are posted only for the following platforms:
-
-- aarch64-apple-darwin
-- aarch64-linux-gnu
-- aarch64-linux-musl
-- x86_64-apple-darwin
-- x86_64-linux-gnu
-- x86_64-linux-musl
-- x86_64-w64-mingw32
+on Linux and remove `LibSSH2` on all platforms.
 
 ## Building
 

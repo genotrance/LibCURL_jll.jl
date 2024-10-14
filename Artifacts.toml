@@ -5,7 +5,7 @@ os = "macos"
 
     [[LibCURL.download]]
     sha256 = "50e113128855e7d9f5b42dbb19e0b7f8dcd186f1dad1511bd24486605b113e7d"
-    url = "https://github.com/genotrance/LibCURL_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.aarch64-apple-darwin.tar.gz"
+    url = "https://github.com/genotrance/libcurl_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.aarch64-apple-darwin.tar.gz"
 [[LibCURL]]
 arch = "aarch64"
 git-tree-sha1 = "7b085634150627d370ede1b7f5851a625c7dc114"
@@ -14,7 +14,7 @@ os = "linux"
 
     [[LibCURL.download]]
     sha256 = "ce33d0ec34d900e9cfd8cf63706760756e50cb905e2ed2d92430d0727c256dbc"
-    url = "https://github.com/genotrance/LibCURL_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.aarch64-linux-gnu.tar.gz"
+    url = "https://github.com/genotrance/libcurl_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.aarch64-linux-gnu.tar.gz"
 [[LibCURL]]
 arch = "aarch64"
 git-tree-sha1 = "8ac9cfc2787e8470a81a5b569edca57e8c22767f"
@@ -23,7 +23,7 @@ os = "linux"
 
     [[LibCURL.download]]
     sha256 = "78df530dde6b74209beb737c4e9bee2e11c5d5f4ce22008953440861cd429085"
-    url = "https://github.com/genotrance/LibCURL_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.aarch64-linux-musl.tar.gz"
+    url = "https://github.com/genotrance/libcurl_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.aarch64-linux-musl.tar.gz"
 [[LibCURL]]
 arch = "x86_64"
 git-tree-sha1 = "8d0d36dd6eff58f61345b81409c5bfa2deea77a8"
@@ -31,7 +31,7 @@ os = "macos"
 
     [[LibCURL.download]]
     sha256 = "845f13c3e2f20371ff4d88c8f7a57208f3db56972ff9f3d3031ef4807b5ef62f"
-    url = "https://github.com/genotrance/LibCURL_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.x86_64-apple-darwin.tar.gz"
+    url = "https://github.com/genotrance/libcurl_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.x86_64-apple-darwin.tar.gz"
 [[LibCURL]]
 arch = "x86_64"
 git-tree-sha1 = "597e98f06eff0ed6379926b18cdf6296d8e4b423"
@@ -40,7 +40,7 @@ os = "linux"
 
     [[LibCURL.download]]
     sha256 = "0152ded6cdd119a8559639d7c04fbf108add04f7295e44fff7d4cf7f50edbe98"
-    url = "https://github.com/genotrance/LibCURL_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.x86_64-linux-gnu.tar.gz"
+    url = "https://github.com/genotrance/libcurl_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.x86_64-linux-gnu.tar.gz"
 [[LibCURL]]
 arch = "x86_64"
 git-tree-sha1 = "a870593bc0a5c58121b61ae896a48fc76cb1a477"
@@ -49,7 +49,7 @@ os = "linux"
 
     [[LibCURL.download]]
     sha256 = "b25282995dfadf5bfc324c72d6e6faaf0a6f2a724679f40f2615e48fb0f091d7"
-    url = "https://github.com/genotrance/LibCURL_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.x86_64-linux-musl.tar.gz"
+    url = "https://github.com/genotrance/libcurl_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.x86_64-linux-musl.tar.gz"
 [[LibCURL]]
 arch = "x86_64"
 git-tree-sha1 = "78db2fa16bbb0c47499312a2d7c86ae848a3a1e7"
@@ -57,4 +57,95 @@ os = "windows"
 
     [[LibCURL.download]]
     sha256 = "1adb9a6abe292af8b7d056c7cffc45070475767b9b49e0d830a0278896e0c8c1"
-    url = "https://github.com/genotrance/LibCURL_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.x86_64-w64-mingw32.tar.gz"
+    url = "https://github.com/genotrance/libcurl_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.x86_64-w64-mingw32.tar.gz"
+[[LibCURL]]
+arch = "aarch64"
+git-tree-sha1 = "64bd5c07c47b2240108803d1f871d8cf58959a79"
+os = "freebsd"
+
+    [[LibCURL.download]]
+    sha256 = "b6a978e3a87963eda3b3489d3ac586dda34cd1bc58009b2c131573b8647b646c"
+    url = "https://github.com/genotrance/libcurl_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.aarch64-unknown-freebsd.tar.gz"
+[[LibCURL]]
+arch = "armv6l"
+call_abi = "eabihf"
+git-tree-sha1 = "6cf88fccba4fedbfa3044e1c7e42b428cc1a4438"
+libc = "glibc"
+os = "linux"
+
+    [[LibCURL.download]]
+    sha256 = "dc1a51244c26e526319184d77ec4acf773d4a06c7a4744273ed0ace112509aa7"
+    url = "https://github.com/genotrance/libcurl_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.armv6l-linux-gnueabihf.tar.gz"
+[[LibCURL]]
+arch = "armv6l"
+call_abi = "eabihf"
+git-tree-sha1 = "19d69db5238545b6ee1825d38af603f31e6ab151"
+libc = "musl"
+os = "linux"
+
+    [[LibCURL.download]]
+    sha256 = "60a5b3392ef89656c38256130cb6ebb392a2fc1c348dd80be0ddd203530e970f"
+    url = "https://github.com/genotrance/libcurl_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.armv6l-linux-musleabihf.tar.gz"
+[[LibCURL]]
+arch = "armv7l"
+call_abi = "eabihf"
+git-tree-sha1 = "511837ed17bb813f0935d712d6e49aeb365c54d4"
+libc = "glibc"
+os = "linux"
+
+    [[LibCURL.download]]
+    sha256 = "c6aa2e310d24f470438b20a03e67097f032de89c34c901301423acf9d8c30ce5"
+    url = "https://github.com/genotrance/libcurl_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.armv7l-linux-gnueabihf.tar.gz"
+[[LibCURL]]
+arch = "armv7l"
+call_abi = "eabihf"
+git-tree-sha1 = "e61f593fd67dcd0a496d0e1bf6e2e4e5cd5d5369"
+libc = "musl"
+os = "linux"
+
+    [[LibCURL.download]]
+    sha256 = "b573100e8be5d512c5a25ffef51b44d67b76c44e3900305bb3b1bb0e47a7bf1c"
+    url = "https://github.com/genotrance/libcurl_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.armv7l-linux-musleabihf.tar.gz"
+[[LibCURL]]
+arch = "i686"
+git-tree-sha1 = "c570039676898a7327f640bb03260a946e0a8125"
+libc = "glibc"
+os = "linux"
+
+    [[LibCURL.download]]
+    sha256 = "e9bfcd819f1c8cbc1124c240c3535280cdd3ca3726ec5486dbe3a434d8e4353a"
+    url = "https://github.com/genotrance/libcurl_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.i686-linux-gnu.tar.gz"
+[[LibCURL]]
+arch = "i686"
+git-tree-sha1 = "1fed4730b8e73d68074ae3422b1bc321b9281493"
+libc = "musl"
+os = "linux"
+
+    [[LibCURL.download]]
+    sha256 = "4a0960db209cce31b1d45656ea3c55d4acfc3b377161d98ddf86c335046768c1"
+    url = "https://github.com/genotrance/libcurl_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.i686-linux-musl.tar.gz"
+[[LibCURL]]
+arch = "i686"
+git-tree-sha1 = "fd9708230a63f48ad7d56c9033158dd6babfc42d"
+os = "windows"
+
+    [[LibCURL.download]]
+    sha256 = "7ac236f2177fc1d2974fa3ea68a83c861739533408a700ccb499e143e45044e6"
+    url = "https://github.com/genotrance/libcurl_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.i686-w64-mingw32.tar.gz"
+[[LibCURL]]
+arch = "powerpc64le"
+git-tree-sha1 = "5070b65a86e5fd58822b1f8befcd19af6b3f9bd8"
+libc = "glibc"
+os = "linux"
+
+    [[LibCURL.download]]
+    sha256 = "06a78031d99fd09e5fd6efba1cc754c7230fd76508907fe561b4ef7689b333fd"
+    url = "https://github.com/genotrance/libcurl_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.powerpc64le-linux-gnu.tar.gz"
+[[LibCURL]]
+arch = "x86_64"
+git-tree-sha1 = "47878dfd5bb8d9a480c0ee943cac3a4b68bfd003"
+os = "freebsd"
+
+    [[LibCURL.download]]
+    sha256 = "fc99e813e35f86efcfb35d0f8586d67c122821406595194d1a19f4e65962387e"
+    url = "https://github.com/genotrance/libcurl_jll.jl/releases/download/LibCURL-v8.9.1+1/LibCURL.v8.9.1.x86_64-unknown-freebsd.tar.gz"
