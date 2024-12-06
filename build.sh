@@ -14,7 +14,7 @@ fi
 LIBCURL_PATH="build/L/LibCURL"
 
 # Apply patch to build/L/LibCurl/common.jl
-patch $LIBCURL_PATH/common.jl < common.jl.patch
+patch -u $LIBCURL_PATH/common.jl -i common.jl.patch
 
 cd $LIBCURL_PATH/LibCURL\@8
 

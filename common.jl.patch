@@ -1,8 +1,8 @@
 diff --git a/L/LibCURL/common.jl b/L/LibCURL/common.jl
-index 5379ce8..5e9c597 100644
+index b4391ff..df12641 100644
 --- a/L/LibCURL/common.jl
 +++ b/L/LibCURL/common.jl
-@@ -52,7 +52,8 @@ function build_libcurl(ARGS, name::String, version::VersionNumber)
+@@ -53,7 +53,8 @@ function build_libcurl(ARGS, name::String, version::VersionNumber)
          --without-brotli
  
          # A few things we actually enable
@@ -12,7 +12,7 @@ index 5379ce8..5e9c597 100644
          --enable-versioned-symbols
      )
  
-@@ -63,7 +64,7 @@ function build_libcurl(ARGS, name::String, version::VersionNumber)
+@@ -64,7 +65,7 @@ function build_libcurl(ARGS, name::String, version::VersionNumber)
  
      if [[ ${target} == *mingw* ]]; then
          # We need to tell it where to find libssh2 on windows
@@ -21,7 +21,7 @@ index 5379ce8..5e9c597 100644
  
          # We also need to tell it to link against schannel (native TLS library)
          FLAGS+=(--with-schannel)
-@@ -81,7 +82,8 @@ function build_libcurl(ARGS, name::String, version::VersionNumber)
+@@ -82,7 +83,8 @@ function build_libcurl(ARGS, name::String, version::VersionNumber)
          FLAGS+=(--with-openssl)
      fi
  
@@ -31,7 +31,7 @@ index 5379ce8..5e9c597 100644
          # Use gssapi on Linux and FreeBSD
          FLAGS+=(--with-gssapi=${prefix})
          if [[ "${target}" == *-freebsd* ]]; then
-@@ -110,7 +112,7 @@ function build_libcurl(ARGS, name::String, version::VersionNumber)
+@@ -111,7 +113,7 @@ function build_libcurl(ARGS, name::String, version::VersionNumber)
      # These are the platforms we will build for by default, unless further
      # platforms are passed in on the command line
      platforms = supported_platforms()
@@ -40,7 +40,7 @@ index 5379ce8..5e9c597 100644
      # The products that we will ensure are always built
      if this_is_curl_jll
          # CURL_jll only provides the executable
-@@ -128,11 +130,11 @@ function build_libcurl(ARGS, name::String, version::VersionNumber)
+@@ -129,11 +131,11 @@ function build_libcurl(ARGS, name::String, version::VersionNumber)
  
      # Dependencies that must be installed before this package can be built
      dependencies = [
@@ -48,7 +48,7 @@ index 5379ce8..5e9c597 100644
 +        # Dependency("LibSSH2_jll"),
          Dependency("Zlib_jll"),
          Dependency("nghttp2_jll"),
-         Dependency("OpenSSL_jll"; compat="3.0.8", platforms=filter(p->Sys.islinux(p) || Sys.isfreebsd(p), platforms)),
+         Dependency("OpenSSL_jll"; compat="3.0.15", platforms=filter(p->Sys.islinux(p) || Sys.isfreebsd(p), platforms)),
 -        # Dependency("Kerberos_krb5_jll"; platforms=filter(p->Sys.islinux(p) || Sys.isfreebsd(p), platforms)),
 +        Dependency("Kerberos_krb5_jll"; platforms=filter(p->Sys.islinux(p) || Sys.isfreebsd(p), platforms)),
          BuildDependency(PackageSpec(name="LLVMCompilerRT_jll", uuid="4e17d02c-6bf5-513e-be62-445f41c75a11", version=llvm_version);
