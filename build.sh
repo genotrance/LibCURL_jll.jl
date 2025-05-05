@@ -8,7 +8,7 @@ if [ ! -f /.dockerenv ]; then
   if [ -t 1 ]; then
     docker run -it --rm -v $(pwd):/libcurl --privileged libcurl_devcontainer /libcurl/build.sh $@
   else
-    docker run --rm -v $(pwd):/libcurl -- privileged libcurl_devcontainer /libcurl/build.sh $@
+    docker run --rm -v $(pwd):/libcurl --privileged libcurl_devcontainer /libcurl/build.sh $@
   fi
 elif [[ "$1" = "--post" ]]; then
   # Post payload to Github
