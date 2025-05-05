@@ -3,7 +3,13 @@
 if [ ! -f /.dockerenv ]; then
   # Build container and run
   docker build . -t libcurl_devcontainer
-  docker run -it --rm -v $(pwd):/libcurl --privileged libcurl_devcontainer /libcurl/build.sh $@
+
+  # Check if we're in an interactive shell
+  if [ -t 1 ]; then
+    docker run -it --rm -v $(pwd):/libcurl --privileged libcurl_devcontainer /libcurl/build.sh $@
+  else
+    docker run --rm -v $(pwd):/libcurl -- privileged libcurl_devcontainer /libcurl/build.sh $@
+  fi
 elif [[ "$1" = "--post" ]]; then
   # Post payload to Github
 
