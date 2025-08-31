@@ -1,56 +1,29 @@
 diff --git a/L/LibCURL/common.jl b/L/LibCURL/common.jl
-index b44e20b..d86cf67 100644
+index abe2a57..5c26cb1 100644
 --- a/L/LibCURL/common.jl
 +++ b/L/LibCURL/common.jl
-@@ -56,7 +56,8 @@ function build_libcurl(ARGS, name::String, version::VersionNumber)
+@@ -85,7 +85,7 @@ function build_libcurl(ARGS, name::String, version::VersionNumber; with_zstd=fal
          --without-brotli
  
          # A few things we actually enable
--        --with-libssh2=${prefix} --with-zlib=${prefix} --with-nghttp2=${prefix}
-+        # --with-libssh2=${prefix} --with-zlib=${prefix} --with-nghttp2=${prefix}
+-	--with-libssh2=${prefix} --with-zlib=${prefix} --with-nghttp2=${prefix}
 +        --with-zlib=${prefix} --with-nghttp2=${prefix}
          --enable-versioned-symbols
      )
  
-@@ -67,7 +68,7 @@ function build_libcurl(ARGS, name::String, version::VersionNumber)
- 
-     if [[ ${target} == *mingw* ]]; then
-         # We need to tell it where to find libssh2 on windows
--        FLAGS+=(LDFLAGS="${LDFLAGS} -L${prefix}/bin")
-+        # FLAGS+=(LDFLAGS="${LDFLAGS} -L${prefix}/bin")
- 
-         # We also need to tell it to link against schannel (native TLS library)
-         FLAGS+=(--with-schannel)
-@@ -85,7 +86,8 @@ function build_libcurl(ARGS, name::String, version::VersionNumber)
+@@ -118,7 +118,7 @@ function build_libcurl(ARGS, name::String, version::VersionNumber; with_zstd=fal
          FLAGS+=(--with-openssl)
      fi
  
 -    if false; then
-+    # if false; then
 +    if [[ "${target}" == *linux* ]] || [[ "${target}" == *-freebsd* ]]; then
          # Use gssapi on Linux and FreeBSD
          FLAGS+=(--with-gssapi=${prefix})
          if [[ "${target}" == *-freebsd* ]]; then
-@@ -114,7 +116,7 @@ function build_libcurl(ARGS, name::String, version::VersionNumber)
-     # These are the platforms we will build for by default, unless further
-     # platforms are passed in on the command line
-     platforms = supported_platforms()
--    push!(platforms, Platform("x86_64", "linux"; sanitize="memory"))
-+    # push!(platforms, Platform("x86_64", "linux"; sanitize="memory"))
-     # The products that we will ensure are always built
-     if this_is_curl_jll
-         # CURL_jll only provides the executable
-@@ -132,10 +134,12 @@ function build_libcurl(ARGS, name::String, version::VersionNumber)
- 
-     # Dependencies that must be installed before this package can be built
-     dependencies = [
--        Dependency("LibSSH2_jll"),
-+        # Dependency("LibSSH2_jll"),
+@@ -175,6 +175,7 @@ function build_libcurl(ARGS, name::String, version::VersionNumber; with_zstd=fal
          Dependency("Zlib_jll"),
          Dependency("nghttp2_jll"),
--        Dependency("OpenSSL_jll"; compat="3.0.16"),
-+        # Dependency("OpenSSL_jll"; compat="3.0.16"),
-+        Dependency("OpenSSL_jll"; compat="3.0.16", platforms=filter(p->Sys.islinux(p) || Sys.isfreebsd(p), platforms)),
+         Dependency("OpenSSL_jll"; compat="3.0.16", platforms=openssl_platforms),
 +        Dependency("Kerberos_krb5_jll"; platforms=filter(p->Sys.islinux(p) || Sys.isfreebsd(p), platforms)),
          BuildDependency(PackageSpec(name="LLVMCompilerRT_jll", uuid="4e17d02c-6bf5-513e-be62-445f41c75a11", version=llvm_version);
                          platforms=filter(p -> sanitize(p)=="memory", platforms)),

@@ -2,8 +2,10 @@
 
 if [ ! -f /.dockerenv ]; then
   # Build container and run
-  docker build . -t libcurl_devcontainer
-  docker run -it --rm -v $(pwd):/libcurl --privileged libcurl_devcontainer /libcurl/build.sh $@
+  docker build . --network host -t libcurl_devcontainer
+  docker run -it --rm --network host -v $(pwd):/libcurl \
+    -v $HOME/.julia:/root/.julia \
+	  --privileged libcurl_devcontainer /libcurl/build.sh $@
 elif [[ "$1" = "--post" ]]; then
   # Post payload to Github
 
@@ -37,6 +39,9 @@ elif [[ "$1" = "--post" ]]; then
   julia build_tarballs.jl --deploy-bin=$GITHUB_REPO_PATH --skip-build
 else
   # Build binaries
+
+  # Install Julia packages and precompile
+  julia -e 'using Pkg; Pkg.add(["BinaryBuilder", "BinaryBuilderBase", "CodecZlib", "JSON3", "URIs"]); Pkg.precompile()'
 
   # Checkout yggdrasil
   if [ -d "build/.git" ]; then
