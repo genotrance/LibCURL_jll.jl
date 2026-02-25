@@ -12,7 +12,16 @@ using SHA: sha256
 using Tar
 using URIs: URI, unescapeuri
 
-const REQUIRED_BASE_TRIPLETS = ("aarch64-apple-darwin", "aarch64-linux-gnu", "aarch64-linux-musl", "x86_64-apple-darwin", "x86_64-linux-gnu", "x86_64-linux-musl", "x86_64-w64-mingw32", "aarch64-unknown-freebsd", "armv6l-linux-gnueabihf", "armv6l-linux-musleabihf", "armv7l-linux-gnueabihf", "armv7l-linux-musleabihf", "i686-linux-gnu", "i686-linux-musl", "i686-w64-mingw32", "powerpc64le-linux-gnu", "x86_64-unknown-freebsd")
+const REQUIRED_BASE_TRIPLETS = (
+  "x86_64-linux-gnu",
+  "x86_64-linux-musl",
+  "x86_64-w64-mingw32",
+  "i686-linux-gnu",
+  "aarch64-linux-gnu",
+  "aarch64-linux-musl",
+  "aarch64-apple-darwin",
+  "x86_64-apple-darwin"
+)
 
 const REQUIRED_PLATFORMS = parse.(Platform, REQUIRED_BASE_TRIPLETS)
 
