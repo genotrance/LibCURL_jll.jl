@@ -64,7 +64,7 @@ apply_common_patches() {
   # Patch 1: Remove --with-libssh2 from configure flags
   if grep -q -- '--with-libssh2' "$common_file"; then
     echo "  - Removing --with-libssh2 from configure flags"
-    sed -i -E 's/--with-libssh2=\$\{prefix\} //' "$common_file"
+    sed -i '/--with-libssh2/d' "$common_file"
   else
     echo "  - LibSSH2 already removed (skipping)"
   fi
