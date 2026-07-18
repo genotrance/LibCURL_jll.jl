@@ -111,7 +111,7 @@ jobs:
             libcurl_devcontainer /workspace/build.sh --build-single
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: libcurl-${{ matrix.platform }}
           path: build/L/LibCURL/LibCURL@8/products/LibCURL.v*.${{ matrix.platform }}.tar.gz
