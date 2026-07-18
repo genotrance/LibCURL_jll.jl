@@ -79,7 +79,8 @@ The build applies these patches to upstream LibCURL:
 1. **Remove LibSSH2**: Removes `--with-libssh2` from configure flags and `LibSSH2_jll` dependency
 2. **Enable Kerberos**: Enables Kerberos support on Linux and FreeBSD platforms
 3. **Add dependency**: Adds `Kerberos_krb5_jll` to the dependency list
-4. **Fix macOS OpenSSL**: Fixes `openssl_platforms` filter to include macOS when using OpenSSL
+4. **Enable NTLM**: Re-enables NTLM authentication (`--enable-ntlm`), which was disabled by default since curl 8.21 as the protocol is deprecated upstream. This flag may need to be removed once curl drops NTLM support entirely.
+5. **Fix macOS OpenSSL**: Fixes `openssl_platforms` filter to include macOS when using OpenSSL
 
 All patches are applied idempotently using content-based matching (not line numbers), making them resilient to upstream changes.
 

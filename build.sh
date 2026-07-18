@@ -93,7 +93,15 @@ apply_common_patches() {
     echo "  - Kerberos_krb5_jll dependency already present (skipping)"
   fi
 
-  # Patch 5: Fix openssl_platforms to include macOS when macos_use_openssl is true
+  # Patch 5: Enable NTLM (disabled by default since curl 8.21, deprecated upstream)
+  if ! grep -q -- '--enable-ntlm' "$common_file"; then
+    echo "  - Adding --enable-ntlm to configure flags"
+    sed -i '/--enable-versioned-symbols/a\        --enable-ntlm' "$common_file"
+  else
+    echo "  - --enable-ntlm already present (skipping)"
+  fi
+
+  # Patch 6: Fix openssl_platforms to include macOS when macos_use_openssl is true
   if grep -q 'openssl_platforms = if macos_use_openssl' "$common_file"; then
     if grep -q 'filter(p->Sys.islinux(p) || Sys.isfreebsd(p), platforms)' "$common_file"; then
       echo "  - Fixing openssl_platforms to include macOS"
