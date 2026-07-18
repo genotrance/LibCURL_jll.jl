@@ -129,7 +129,7 @@ jobs:
         with:
           python-version: "3.13"
       - uses: astral-sh/setup-uv@v7
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: libcurl-x86_64-linux-gnu
           path: artifacts/
@@ -167,7 +167,7 @@ jobs:
         with:
           python-version: "3.13"
       - uses: astral-sh/setup-uv@v7
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: libcurl-aarch64-linux-gnu
           path: artifacts/
@@ -205,7 +205,7 @@ jobs:
         with:
           python-version: "3.13"
       - uses: astral-sh/setup-uv@v7
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: libcurl-aarch64-apple-darwin
           path: artifacts/
@@ -253,7 +253,7 @@ jobs:
         with:
           python-version: "3.13"
       - uses: astral-sh/setup-uv@v7
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: libcurl-x86_64-w64-mingw32
           path: artifacts/
@@ -329,7 +329,7 @@ jobs:
           sed -i -E "s/v\"[0-9]+\.[0-9]+\.[0-9]+\"/v\"$BASE\"/" "build/L/LibCURL/LibCURL@8/build_tarballs.jl"
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: all-artifacts/
           pattern: libcurl-*
