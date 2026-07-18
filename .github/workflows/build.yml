@@ -1,0 +1,372 @@
+name: Build, Test & Release
+
+on:
+  push:
+    branches: [main, devel]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # JLL dependencies to download for testing (name:repo:version_filter)
+  # OpenSSL compat="3.0.16" in Yggdrasil, so pin to 3.0.x series
+  JLL_DEPS: "nghttp2:nghttp2_jll: OpenSSL:OpenSSL_jll:3[.]0 Zlib:Zlib_jll: Zstd:Zstd_jll: Kerberos_krb5:Kerberos_krb5_jll:"
+  # Windows has no OpenSSL/Kerberos (uses Schannel)
+  JLL_DEPS_WINDOWS: "nghttp2:nghttp2_jll: Zlib:Zlib_jll: Zstd:Zstd_jll:"
+
+jobs:
+  # --------------------------------------------------------------------------
+  # Setup: detect version, build + cache Docker image
+  # --------------------------------------------------------------------------
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      base_version: ${{ steps.version.outputs.base_version }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Detect version
+        id: version
+        run: |
+          UPSTREAM_TAG=$(gh release list --repo JuliaBinaryWrappers/LibCURL_jll.jl --limit 1 --json tagName --jq '.[0].tagName')
+          UPSTREAM_VERSION=$(echo "$UPSTREAM_TAG" | sed -E 's/^LibCURL-v(.+)$/\1/')
+          UPSTREAM_BASE=$(echo "$UPSTREAM_VERSION" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+)\+.*$/\1/')
+          UPSTREAM_SUFFIX=$(echo "$UPSTREAM_VERSION" | sed -E 's/^[0-9]+\.[0-9]+\.[0-9]+\+([0-9]+)$/\1/')
+          OUR_SUFFIX=$((UPSTREAM_SUFFIX + 1))
+          OUR_VERSION="${UPSTREAM_BASE}+${OUR_SUFFIX}"
+          echo "version=$OUR_VERSION" >> $GITHUB_OUTPUT
+          echo "base_version=$UPSTREAM_BASE" >> $GITHUB_OUTPUT
+          echo "Upstream: $UPSTREAM_TAG -> Building: $OUR_VERSION"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Cache Docker image
+        id: docker-cache
+        uses: actions/cache@v5
+        with:
+          path: /tmp/docker-image.tar.zst
+          key: docker-${{ hashFiles('Dockerfile') }}
+
+      - name: Build and save Docker image
+        if: steps.docker-cache.outputs.cache-hit != 'true'
+        run: |
+          docker build . --network host -t libcurl_devcontainer
+          docker save libcurl_devcontainer | zstd -T0 -3 > /tmp/docker-image.tar.zst
+
+  # --------------------------------------------------------------------------
+  # Build: one parallel job per platform
+  # --------------------------------------------------------------------------
+  build:
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - x86_64-linux-gnu
+          - x86_64-linux-musl
+          - x86_64-w64-mingw32
+          - i686-linux-gnu
+          - aarch64-linux-gnu
+          - aarch64-linux-musl
+          - aarch64-apple-darwin
+          - x86_64-apple-darwin
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Restore Docker image
+        uses: actions/cache/restore@v5
+        with:
+          path: /tmp/docker-image.tar.zst
+          key: docker-${{ hashFiles('Dockerfile') }}
+
+      - name: Load Docker image
+        run: |
+          if [ -f /tmp/docker-image.tar.zst ]; then
+            zstd -d /tmp/docker-image.tar.zst --stdout | docker load
+          else
+            docker build . --network host -t libcurl_devcontainer
+          fi
+
+      - name: Setup Yggdrasil and apply patches
+        run: |
+          git clone --depth 1 https://github.com/JuliaPackaging/Yggdrasil build
+          source <(sed -n '/^apply_common_patches/,/^}/p' build.sh)
+          apply_common_patches "build/L/LibCURL/common.jl"
+          BASE=${{ needs.setup.outputs.base_version }}
+          sed -i -E "s/v\"[0-9]+\.[0-9]+\.[0-9]+\"/v\"$BASE\"/" "build/L/LibCURL/LibCURL@8/build_tarballs.jl"
+          mkdir -p "build/L/LibCURL/LibCURL@8/products"
+
+      - name: Build ${{ matrix.platform }}
+        run: |
+          docker run --rm --network host \
+            -v $(pwd):/workspace:ro \
+            -v $(pwd)/build:/libcurl/build:rw \
+            --privileged \
+            -e BUILD_PLATFORM="${{ matrix.platform }}" \
+            -e LIBCURL_VERSION="${{ needs.setup.outputs.base_version }}" \
+            libcurl_devcontainer /workspace/build.sh --build-single
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: libcurl-${{ matrix.platform }}
+          path: build/L/LibCURL/LibCURL@8/products/LibCURL.v*.${{ matrix.platform }}.tar.gz
+          retention-days: 7
+
+  # --------------------------------------------------------------------------
+  # Test: native runners for key platforms
+  # --------------------------------------------------------------------------
+  test-linux-x86_64:
+    needs: [setup, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/download-artifact@v7
+        with:
+          name: libcurl-x86_64-linux-gnu
+          path: artifacts/
+      - name: Download JLL deps
+        run: |
+          mkdir -p /tmp/libcurl /tmp/jll-deps
+          tar xzf artifacts/LibCURL.v*.x86_64-linux-gnu.tar.gz -C /tmp/libcurl
+          for SPEC in $JLL_DEPS; do
+            IFS=':' read -r NAME REPO FILTER <<< "$SPEC"
+            if [ -n "$FILTER" ]; then
+              TAG=$(gh release list --repo JuliaBinaryWrappers/${REPO}.jl --limit 50 --json tagName --jq "[.[].tagName | select(test(\"^${NAME}-v${FILTER}\"))][0]")
+            else
+              TAG=$(gh release list --repo JuliaBinaryWrappers/${REPO}.jl --limit 1 --json tagName --jq '.[0].tagName')
+            fi
+            VER=$(echo "$TAG" | sed -E "s/^${NAME}-v([0-9]+\.[0-9]+\.[0-9]+).*/\1/")
+            FNAME="${NAME}.v${VER}.x86_64-linux-gnu.tar.gz"
+            echo "Downloading $FNAME from $TAG"
+            if gh release download "$TAG" --repo JuliaBinaryWrappers/${REPO}.jl --pattern "$FNAME" --dir /tmp/jll-deps 2>/dev/null; then
+              tar xzf "/tmp/jll-deps/$FNAME" -C /tmp/libcurl
+            else
+              echo "  Skipping $NAME (no asset for this platform)"
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Run tests
+        run: LD_LIBRARY_PATH=/tmp/libcurl/lib uv run --with pytest pytest tests/test_libcurl.py -v
+
+  test-linux-aarch64:
+    needs: [setup, build]
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/download-artifact@v7
+        with:
+          name: libcurl-aarch64-linux-gnu
+          path: artifacts/
+      - name: Download JLL deps
+        run: |
+          mkdir -p /tmp/libcurl /tmp/jll-deps
+          tar xzf artifacts/LibCURL.v*.aarch64-linux-gnu.tar.gz -C /tmp/libcurl
+          for SPEC in $JLL_DEPS; do
+            IFS=':' read -r NAME REPO FILTER <<< "$SPEC"
+            if [ -n "$FILTER" ]; then
+              TAG=$(gh release list --repo JuliaBinaryWrappers/${REPO}.jl --limit 50 --json tagName --jq "[.[].tagName | select(test(\"^${NAME}-v${FILTER}\"))][0]")
+            else
+              TAG=$(gh release list --repo JuliaBinaryWrappers/${REPO}.jl --limit 1 --json tagName --jq '.[0].tagName')
+            fi
+            VER=$(echo "$TAG" | sed -E "s/^${NAME}-v([0-9]+\.[0-9]+\.[0-9]+).*/\1/")
+            FNAME="${NAME}.v${VER}.aarch64-linux-gnu.tar.gz"
+            echo "Downloading $FNAME from $TAG"
+            if gh release download "$TAG" --repo JuliaBinaryWrappers/${REPO}.jl --pattern "$FNAME" --dir /tmp/jll-deps 2>/dev/null; then
+              tar xzf "/tmp/jll-deps/$FNAME" -C /tmp/libcurl
+            else
+              echo "  Skipping $NAME (no asset for this platform)"
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Run tests
+        run: LD_LIBRARY_PATH=/tmp/libcurl/lib uv run --with pytest pytest tests/test_libcurl.py -v
+
+  test-macos-arm64:
+    needs: [setup, build]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/download-artifact@v7
+        with:
+          name: libcurl-aarch64-apple-darwin
+          path: artifacts/
+      - name: Download JLL deps
+        run: |
+          mkdir -p /tmp/libcurl /tmp/jll-deps
+          tar xzf artifacts/LibCURL.v*.aarch64-apple-darwin.tar.gz -C /tmp/libcurl
+          for SPEC in $JLL_DEPS; do
+            IFS=':' read -r NAME REPO FILTER <<< "$SPEC"
+            if [ -n "$FILTER" ]; then
+              TAG=$(gh release list --repo JuliaBinaryWrappers/${REPO}.jl --limit 50 --json tagName --jq "[.[].tagName | select(test(\"^${NAME}-v${FILTER}\"))][0]")
+            else
+              TAG=$(gh release list --repo JuliaBinaryWrappers/${REPO}.jl --limit 1 --json tagName --jq '.[0].tagName')
+            fi
+            VER=$(echo "$TAG" | sed -E "s/^${NAME}-v([0-9]+\.[0-9]+\.[0-9]+).*/\1/")
+            FNAME="${NAME}.v${VER}.aarch64-apple-darwin.tar.gz"
+            echo "Downloading $FNAME from $TAG"
+            if gh release download "$TAG" --repo JuliaBinaryWrappers/${REPO}.jl --pattern "$FNAME" --dir /tmp/jll-deps 2>/dev/null; then
+              tar xzf "/tmp/jll-deps/$FNAME" -C /tmp/libcurl
+            else
+              echo "  Skipping $NAME (no asset for this platform)"
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Build curl_helpers
+        run: |
+          cc -shared -o /tmp/libcurl/lib/libcurl_helpers.dylib \
+            -I/tmp/libcurl/include \
+            -L/tmp/libcurl/lib -lcurl \
+            -Wl,-rpath,/tmp/libcurl/lib \
+            tests/curl_helpers.c
+      - name: Run tests
+        run: DYLD_LIBRARY_PATH=/tmp/libcurl/lib uv run --with pytest pytest tests/test_libcurl.py -v
+
+  test-windows-x86_64:
+    needs: [setup, build]
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/download-artifact@v7
+        with:
+          name: libcurl-x86_64-w64-mingw32
+          path: artifacts/
+      - name: Download JLL deps and test
+        run: |
+          mkdir -p libcurl-test /tmp/jll-deps
+          tar xzf artifacts/LibCURL.v*.x86_64-w64-mingw32.tar.gz -C libcurl-test
+          for SPEC in $JLL_DEPS_WINDOWS; do
+            IFS=':' read -r NAME REPO FILTER <<< "$SPEC"
+            if [ -n "$FILTER" ]; then
+              TAG=$(gh release list --repo JuliaBinaryWrappers/${REPO}.jl --limit 50 --json tagName --jq "[.[].tagName | select(test(\"^${NAME}-v${FILTER}\"))][0]")
+            else
+              TAG=$(gh release list --repo JuliaBinaryWrappers/${REPO}.jl --limit 1 --json tagName --jq '.[0].tagName')
+            fi
+            VER=$(echo "$TAG" | sed -E "s/^${NAME}-v([0-9]+\.[0-9]+\.[0-9]+).*/\1/")
+            FNAME="${NAME}.v${VER}.x86_64-w64-mingw32.tar.gz"
+            echo "Downloading $FNAME from $TAG"
+            if gh release download "$TAG" --repo JuliaBinaryWrappers/${REPO}.jl --pattern "$FNAME" --dir /tmp/jll-deps 2>/dev/null; then
+              tar xzf "/tmp/jll-deps/$FNAME" -C libcurl-test
+            else
+              echo "  Skipping $NAME (no asset for this platform)"
+            fi
+          done
+          PATH="$(pwd)/libcurl-test/bin:$PATH" uv run --with pytest pytest tests/test_libcurl.py -v
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  # --------------------------------------------------------------------------
+  # Release: only on main, after all tests pass
+  # --------------------------------------------------------------------------
+  release:
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - setup
+      - build
+      - test-linux-x86_64
+      - test-linux-aarch64
+      - test-macos-arm64
+      - test-windows-x86_64
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Update Project.toml version
+        run: |
+          VERSION="${{ needs.setup.outputs.version }}"
+          sed -i -E "s/^version = \"[^\"]+\"/version = \"$VERSION\"/" Project.toml
+
+      - name: Restore Docker image
+        uses: actions/cache/restore@v5
+        with:
+          path: /tmp/docker-image.tar.zst
+          key: docker-${{ hashFiles('Dockerfile') }}
+
+      - name: Load Docker image
+        run: |
+          if [ -f /tmp/docker-image.tar.zst ]; then
+            zstd -d /tmp/docker-image.tar.zst --stdout | docker load
+          else
+            docker build . --network host -t libcurl_devcontainer
+          fi
+
+      - name: Setup Yggdrasil and apply patches
+        run: |
+          git clone --depth 1 https://github.com/JuliaPackaging/Yggdrasil build
+          source <(sed -n '/^apply_common_patches/,/^}/p' build.sh)
+          apply_common_patches "build/L/LibCURL/common.jl"
+          BASE="${{ needs.setup.outputs.base_version }}"
+          sed -i -E "s/v\"[0-9]+\.[0-9]+\.[0-9]+\"/v\"$BASE\"/" "build/L/LibCURL/LibCURL@8/build_tarballs.jl"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: all-artifacts/
+          pattern: libcurl-*
+          merge-multiple: false
+
+      - name: Collect tarballs
+        run: |
+          mkdir -p build/L/LibCURL/LibCURL@8/products
+          cp all-artifacts/*/LibCURL.v*.tar.gz build/L/LibCURL/LibCURL@8/products/
+
+      - name: Generate Artifacts.toml and release
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          docker run --rm --network host \
+            -v $(pwd):/workspace:rw \
+            -v $(pwd)/build:/libcurl/build:rw \
+            --privileged \
+            libcurl_devcontainer bash -c '
+              git config --global --add safe.directory /workspace
+              cd /workspace && julia bind_artifacts.jl
+            '
+
+          git add -A
+          git commit -m "Release ${{ needs.setup.outputs.version }}" || echo "No changes to commit"
+          git push
+
+          GITHUB_REPO="${{ github.repository }}"
+          docker run --rm --network host \
+            -v $(pwd):/workspace:rw \
+            -v $(pwd)/build:/libcurl/build:rw \
+            --privileged \
+            -e GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
+            libcurl_devcontainer bash -c "
+              cd /libcurl/build/L/LibCURL/LibCURL@8
+              julia build_tarballs.jl --deploy-bin=$GITHUB_REPO --skip-build
+            "
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
