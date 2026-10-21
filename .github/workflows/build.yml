@@ -4,6 +4,9 @@ on:
   push:
     branches: [main, devel]
   workflow_dispatch:
+  schedule:
+    # Run before mcurl's Monday 18:00 UTC downstream check.
+    - cron: "0 6 * * 1"
 
 concurrency:
   group: build-${{ github.ref }}
@@ -25,33 +28,66 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       base_version: ${{ steps.version.outputs.base_version }}
+      release_needed: ${{ steps.version.outputs.release_needed }}
     steps:
       - uses: actions/checkout@v7
 
-      - name: Detect version
+      - name: Detect version and release state
         id: version
         run: |
+          set -euo pipefail
+
           UPSTREAM_TAG=$(gh release list --repo JuliaBinaryWrappers/LibCURL_jll.jl --limit 1 --json tagName --jq '.[0].tagName')
           UPSTREAM_VERSION=$(echo "$UPSTREAM_TAG" | sed -E 's/^LibCURL-v(.+)$/\1/')
-          UPSTREAM_BASE=$(echo "$UPSTREAM_VERSION" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+)\+.*$/\1/')
-          UPSTREAM_SUFFIX=$(echo "$UPSTREAM_VERSION" | sed -E 's/^[0-9]+\.[0-9]+\.[0-9]+\+([0-9]+)$/\1/')
+          if ! [[ "$UPSTREAM_VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+)$ ]]; then
+            echo "Unexpected upstream tag: $UPSTREAM_TAG" >&2
+            exit 1
+          fi
+          UPSTREAM_BASE="${BASH_REMATCH[1]}"
+          UPSTREAM_SUFFIX="${BASH_REMATCH[2]}"
           OUR_SUFFIX=$((UPSTREAM_SUFFIX + 1))
           OUR_VERSION="${UPSTREAM_BASE}+${OUR_SUFFIX}"
+          OUR_TAG="LibCURL-v${OUR_VERSION}"
+
+          RELEASE_EXISTS=false
+          # Let an API failure fail the job rather than mistaking it for a
+          # missing release and risking a duplicate deployment.
+          RELEASE_TAGS=$(gh release list --repo "${{ github.repository }}" --limit 100 --json tagName --jq '.[].tagName')
+          if printf '%s\n' "$RELEASE_TAGS" | grep -Fxq "$OUR_TAG"; then
+            RELEASE_EXISTS=true
+          fi
+
+          # A published release and its metadata form one completed release.
+          # Reconcile metadata if a prior run published the release first.
+          ARTIFACT_URLS=$(grep -Fc "/${OUR_TAG}/" Artifacts.toml || true)
+          METADATA_COMPLETE=false
+          if grep -Fxq "version = \"$OUR_VERSION\"" Project.toml && [ "$ARTIFACT_URLS" -eq 8 ]; then
+            METADATA_COMPLETE=true
+          fi
+
+          RELEASE_NEEDED=true
+          if [ "$RELEASE_EXISTS" = true ] && [ "$METADATA_COMPLETE" = true ]; then
+            RELEASE_NEEDED=false
+          fi
+
           echo "version=$OUR_VERSION" >> $GITHUB_OUTPUT
           echo "base_version=$UPSTREAM_BASE" >> $GITHUB_OUTPUT
-          echo "Upstream: $UPSTREAM_TAG -> Building: $OUR_VERSION"
+          echo "release_needed=$RELEASE_NEEDED" >> $GITHUB_OUTPUT
+          echo "Upstream: $UPSTREAM_TAG -> target: $OUR_VERSION"
+          echo "Release exists: $RELEASE_EXISTS; metadata complete: $METADATA_COMPLETE"
         env:
           GH_TOKEN: ${{ github.token }}
 
       - name: Cache Docker image
         id: docker-cache
+        if: ${{ steps.version.outputs.release_needed == 'true' || github.event_name != 'schedule' }}
         uses: actions/cache@v6
         with:
           path: /tmp/docker-image.tar.zst
           key: docker-${{ hashFiles('Dockerfile') }}
 
       - name: Build and save Docker image
-        if: steps.docker-cache.outputs.cache-hit != 'true'
+        if: ${{ (steps.version.outputs.release_needed == 'true' || github.event_name != 'schedule') && steps.docker-cache.outputs.cache-hit != 'true' }}
         run: |
           docker build . --network host -t libcurl_devcontainer
           docker save libcurl_devcontainer | zstd -T0 -3 > /tmp/docker-image.tar.zst
@@ -61,6 +97,8 @@ jobs:
   # --------------------------------------------------------------------------
   build:
     needs: setup
+    # Scheduled runs stop here when the target release is already complete.
+    if: ${{ needs.setup.outputs.release_needed == 'true' || github.event_name != 'schedule' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -122,6 +160,7 @@ jobs:
   # --------------------------------------------------------------------------
   test-linux-x86_64:
     needs: [setup, build]
+    if: ${{ needs.setup.outputs.release_needed == 'true' || github.event_name != 'schedule' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -160,6 +199,7 @@ jobs:
 
   test-linux-aarch64:
     needs: [setup, build]
+    if: ${{ needs.setup.outputs.release_needed == 'true' || github.event_name != 'schedule' }}
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v7
@@ -198,6 +238,7 @@ jobs:
 
   test-macos-arm64:
     needs: [setup, build]
+    if: ${{ needs.setup.outputs.release_needed == 'true' || github.event_name != 'schedule' }}
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
@@ -243,6 +284,7 @@ jobs:
 
   test-windows-x86_64:
     needs: [setup, build]
+    if: ${{ needs.setup.outputs.release_needed == 'true' || github.event_name != 'schedule' }}
     runs-on: windows-latest
     defaults:
       run:
@@ -285,7 +327,8 @@ jobs:
   # Release: only on main, after all tests pass
   # --------------------------------------------------------------------------
   release:
-    if: github.ref == 'refs/heads/main'
+    # Devel remains build-and-test only. A known release is never republished.
+    if: ${{ github.ref == 'refs/heads/main' && needs.setup.outputs.release_needed == 'true' }}
     needs:
       - setup
       - build
@@ -340,8 +383,9 @@ jobs:
           mkdir -p build/L/LibCURL/LibCURL@8/products
           cp all-artifacts/*/LibCURL.v*.tar.gz build/L/LibCURL/LibCURL@8/products/
 
-      - name: Generate Artifacts.toml and release
+      - name: Generate Artifacts.toml and commit metadata
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
@@ -354,11 +398,30 @@ jobs:
               cd /workspace && julia bind_artifacts.jl
             '
 
-          git add -A
-          git commit -m "Release ${{ needs.setup.outputs.version }}" || echo "No changes to commit"
-          git push
+          git add Project.toml Artifacts.toml
+          if git diff --cached --quiet; then
+            echo "Release metadata is already committed"
+          else
+            git commit -m "Release ${{ needs.setup.outputs.version }}"
+            git push
+          fi
 
+      - name: Publish release unless it already exists
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.setup.outputs.version }}"
+          TAG="LibCURL-v${VERSION}"
           GITHUB_REPO="${{ github.repository }}"
+
+          # A prior run may have published successfully before failing elsewhere.
+          # Do not treat an API error as a missing release: failing is safer
+          # than invoking BinaryBuilder's deployment a second time.
+          RELEASE_TAGS=$(gh release list --repo "$GITHUB_REPO" --limit 100 --json tagName --jq '.[].tagName')
+          if printf '%s\n' "$RELEASE_TAGS" | grep -Fxq "$TAG"; then
+            echo "$TAG already exists; metadata reconciliation is complete"
+            exit 0
+          fi
+
           docker run --rm --network host \
             -v $(pwd):/workspace:rw \
             -v $(pwd)/build:/libcurl/build:rw \

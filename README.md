@@ -67,6 +67,39 @@ This will automatically:
 
 **No manual steps required!**
 
+## Weekly GitHub Release Automation
+
+`.github/workflows/build.yml` checks upstream every Monday at **06:00 UTC**. This
+precedes mcurl's Monday 18:00 UTC check so the downstream package can consume a
+completed LibCURL release.
+
+- The setup job computes the target from the latest upstream release, then checks
+  for the corresponding `LibCURL-v<version>` release in this repository.
+- If the release and all eight `Artifacts.toml` URLs are already present, the
+  scheduled run succeeds after setup; build, test, and release jobs are skipped.
+- For a new upstream release, the workflow builds all eight platforms, runs the
+  existing platform tests, commits `Project.toml` and `Artifacts.toml`, then
+  publishes the GitHub release.
+- Pushes and manual dispatches still build and test as before. `devel` never
+  releases. On `main`, the release job also checks the GitHub release immediately
+  before publishing, so it cannot create a duplicate.
+
+The metadata commit is pushed before publication. If that push succeeds but
+publication fails, the next Monday rebuilds and publishes the missing release.
+If publication exists but the metadata is absent (for example, an interrupted
+run at the opposite boundary), the next run rebuilds only to reconcile and commit
+the metadata, while the final release check skips duplicate publication. A normal
+completed release therefore makes future scheduled runs no-ops.
+
+The workflow uses `GITHUB_TOKEN` with `contents: write` for the metadata push and
+release. In repository **Settings -> Actions -> General**, set *Workflow
+permissions* to **Read and write permissions** and allow GitHub Actions to create
+and approve pull requests only if local policy requires it. If `main` branch
+protection is enabled, allow `github-actions[bot]` (or this workflow) to push the
+release metadata, or exempt this workflow from the required PR rule. Pushes made
+with `GITHUB_TOKEN` do not trigger another `push` workflow run, so the release
+commit cannot create a workflow loop.
+
 ## Version Scheme
 
 - **Upstream**: `LibCURL-v8.18.0+0`
