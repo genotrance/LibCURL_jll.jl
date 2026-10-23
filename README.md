@@ -100,6 +100,19 @@ release metadata, or exempt this workflow from the required PR rule. Pushes made
 with `GITHUB_TOKEN` do not trigger another `push` workflow run, so the release
 commit cannot create a workflow loop.
 
+## CI Test Dependencies
+
+The Python smoke test is a standalone `ctypes` test rather than a Python project:
+this repository has no `pyproject.toml`, Python package, or application
+dependencies. CI installs `pytest` transiently with `uv run --with pytest`; there
+is therefore no `uv.lock` to track or upgrade. If the test grows into a managed
+Python project, add its dependencies to `pyproject.toml`, generate a reviewed lock
+with `uv lock --upgrade` (or `uv lock --upgrade-package <name>`), test it, and
+commit both files.
+
+Dependabot's `github-actions` configuration keeps the CI action versions reviewed.
+There is intentionally no `uv` Dependabot entry until a `pyproject.toml` exists.
+
 ## Version Scheme
 
 - **Upstream**: `LibCURL-v8.18.0+0`
