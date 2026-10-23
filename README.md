@@ -69,9 +69,11 @@ This will automatically:
 
 ## Weekly GitHub Release Automation
 
-`.github/workflows/build.yml` checks upstream every Monday at **06:00 UTC**. This
-precedes mcurl's Monday 18:00 UTC check so the downstream package can consume a
-completed LibCURL release.
+`.github/workflows/build.yml` checks upstream every Monday at **06:00 UTC**. GitHub
+loads scheduled workflows from the repository default branch, but every job in a
+scheduled run explicitly checks out `main`, so releases continue to use `main`
+when `devel` is the default branch. This precedes mcurl's Monday 18:00 UTC check
+so the downstream package can consume a completed LibCURL release.
 
 - The setup job computes the target from the latest upstream release, then checks
   for the corresponding `LibCURL-v<version>` release in this repository.
@@ -81,8 +83,9 @@ completed LibCURL release.
   existing platform tests, commits `Project.toml` and `Artifacts.toml`, then
   publishes the GitHub release.
 - Pushes and manual dispatches still build and test as before. `devel` never
-  releases. On `main`, the release job also checks the GitHub release immediately
-  before publishing, so it cannot create a duplicate.
+  releases; main pushes and Monday schedules can release from `main`. The release
+  job also checks the GitHub release immediately before publishing, so it cannot
+  create a duplicate.
 
 The metadata commit is pushed before publication. If that push succeeds but
 publication fails, the next Monday rebuilds and publishes the missing release.

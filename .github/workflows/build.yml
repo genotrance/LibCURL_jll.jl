@@ -30,7 +30,10 @@ jobs:
       base_version: ${{ steps.version.outputs.base_version }}
       release_needed: ${{ steps.version.outputs.release_needed }}
     steps:
+      # Schedules run from the default branch, but releases always use main.
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'main' || github.ref }}
 
       - name: Detect version and release state
         id: version
@@ -114,6 +117,8 @@ jobs:
           - x86_64-apple-darwin
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'main' || github.ref }}
 
       - name: Restore Docker image
         uses: actions/cache/restore@v6
@@ -164,6 +169,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'main' || github.ref }}
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
@@ -203,6 +210,8 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'main' || github.ref }}
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
@@ -242,6 +251,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'main' || github.ref }}
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
@@ -291,6 +302,8 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'main' || github.ref }}
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
@@ -324,11 +337,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   # --------------------------------------------------------------------------
-  # Release: only on main, after all tests pass
+  # Release: on main pushes or scheduled main checkouts, after all tests pass
   # --------------------------------------------------------------------------
   release:
-    # Devel remains build-and-test only. A known release is never republished.
-    if: ${{ github.ref == 'refs/heads/main' && needs.setup.outputs.release_needed == 'true' }}
+    # Devel remains build-and-test only. Scheduled runs check out main.
+    # A known release is never republished.
+    if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'schedule') && needs.setup.outputs.release_needed == 'true' }}
     needs:
       - setup
       - build
@@ -343,6 +357,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'schedule' && 'main' || github.ref }}
 
       - name: Update Project.toml version
         run: |
